@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>EASY DIGITAL STUDIOS | By Deepak Soni</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            black: '#020617',  // Deepest blue-black
+                            dark: '#0f172a',   // Slate 900
+                            blue: '#1e40af',   // Standard Blue
+                            cyan: '#06b6d4',   // Cyan accent
+                            accent: '#3b82f6'  // Bright Blue
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Montserrat', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+
+        body {
+            background-color: #020617; /* Deep Blue/Black */
+            color: white;
+            font-family: 'Montserrat', sans-serif;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, .serif {
+            font-family: 'Playfair Display', serif;
+        }
+
+        /* Background Canvas */
+        #neuralCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        /* Glassmorphism Utilities */
+        .glass {
+            background: rgba(2, 6, 23, 0.95); /* Darker base for visibility */
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        
+        .glass-card {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(59, 130, 246, 0.1); 
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            background: rgba(15, 23, 42, 0.9);
+            border-color: rgba(59, 130, 246, 0.4);
+            box-shadow: 0 10px 30px -10px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Scrollbar hiding for horizontal nav */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Utilities */
+        .section-title span {
+            display: inline-block;
+            width: 60px;
+            height: 3px;
+            background: #3b82f6;
+            margin-bottom: 6px;
+            margin-right: 15px;
+        }
+        
+        .faq-item[open] summary ~ * {
+            animation: sweep .5s ease-in-out;
+        }
+
+        @keyframes sweep {
+            0% {opacity: 0; transform: translateY(-10px)}
+            100% {opacity: 1; transform: translateY(0)}
+        }
+
+        /* ALBUM STYLES */
+        .album-perspective {
+            perspective: 2000px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            padding: 20px 0;
+        }
+
+        .album-book {
+            position: relative;
+            width: 100%;
+            max-width: 1000px; /* Adjust based on screen */
+            aspect-ratio: 3/1; 
+            transform-style: preserve-3d;
+            transition: transform 0.5s;
+        }
+
+        .album-leaf {
+            position: absolute;
+            top: 0;
+            left: 50%; /* Spine is in the middle */
+            width: 50%;
+            height: 100%;
+            transform-origin: left center;
+            transform-style: preserve-3d;
+            cursor: pointer;
+            z-index: calc(100 - var(--i));
+            transition: transform 1.2s cubic-bezier(0.645, 0.045, 0.355, 1), z-index 0s 0.6s;
+        }
+
+        .album-leaf.flipped {
+            transform: rotateY(-180deg);
+            z-index: calc(100 + var(--i));
+        }
+
+        .album-page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            background-color: #0f172a;
+            overflow: hidden;
+            border-left: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .album-page.front { transform: rotateY(0deg); }
+        .album-page.back { transform: rotateY(180deg); background-color: #020617; }
+
+        .album-base-left { position: absolute; top: 0; left: 0; width: 50%; height: 100%; z-index: 0; }
+        .album-base-right { position: absolute; top: 0; left: 50%; width: 50%; height: 100%; z-index: 0; }
+
+        .page-lighting {
+            position: absolute; inset: 0; pointer-events: none;
+            background: linear-gradient(to right, rgba(0,0,0,0.3), rgba(0,0,0,0) 20%);
+        }
+        .back .page-lighting {
+            background: linear-gradient(to left, rgba(0,0,0,0.3), rgba(0,0,0,0) 20%);
+        }
+
+        .page-img {
+            width: 100%; height: 100%; object-fit: contain; position: absolute; top: 0; left: 0;
+            background-color: #0f172a; /* Blends seamlessly with the album page */
+        }
+
+        /* ALBUM FULLSCREEN FACILITIES */
+        .album-perspective.fullscreen-mode {
+            position: fixed;
+            inset: 0;
+            z-index: 999999;
+            background: rgba(2, 6, 23, 0.98);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .album-perspective.fullscreen-mode .album-book {
+            max-width: 95vw;
+            width: 100%;
+        }
+        .album-fullscreen-close {
+            display: none;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 24px;
+            z-index: 100000;
+            cursor: pointer;
+            width: 45px;
+            height: 45px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            text-align: center;
+            line-height: 45px;
+        }
+        .album-perspective.fullscreen-mode .album-fullscreen-close {
+            display: block;
+        }
+        .rotate-hint {
+            display: none;
+            color: #06b6d4;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        @media screen and (orientation: portrait) {
+            .album-perspective.fullscreen-mode .rotate-hint {
+                display: block;
+                animation: pulse 2s infinite;
+            }
+            .album-perspective.fullscreen-mode .album-book {
+                width: 100vw;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .album-book { aspect-ratio: 3/2; }
+        }
+        
+        .hidden { display: none !important; }
+
+        /* Grayscale Effect */
+        .grayscale {
+            filter: grayscale(100%);
+        }
+
+        /* Video Section Styling */
+        .video-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9; /* Clean, modern aspect ratio */
+            overflow: hidden;
+            max-width: 100%;
+            background: #000;
+            border-radius: 12px;
+        }
+        
+        .video-wrapper {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .video-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+        
+        /* Centering Carousel logic - Fixed absolute centering */
+        .teaser-carousel-container {
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Ensures the direct flex children are centered */
+            position: relative;
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            overflow: visible;
+        }
+        
+        .teaser-card {
+            flex: 0 0 85%; /* Main focus card width */
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 20;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+        }
+        
+        /* Absolute peek so it doesn't push the center card to the left */
+        .teaser-peek {
+            position: absolute;
+            right: -8%; 
+            width: 25%;
+            height: 80%;
+            top: 50%;
+            transform: translateY(-50%) scale(0.9);
+            opacity: 0.15;
+            filter: blur(15px);
+            transition: all 0.6s ease-in-out;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .teaser-overlay {
+            z-index: 40;
+            transition: opacity 0.5s ease, visibility 0.5s;
+            cursor: pointer;
+        }
+        
+        .teaser-overlay.playing {
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
+        }
+
+        .video-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+            width: 65px;
+            height: 65px;
+            background: rgba(59, 130, 246, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+        }
+        .video-nav:hover {
+            background: #3b82f6;
+            transform: translateY(-50%) scale(1.1);
+        }
+        .video-nav.prev { left: -30px; }
+        .video-nav.next { right: -30px; }
+
+        /* Animation class for switching */
+        .switching-video {
+            animation: comingIn 0.7s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+        }
+        @keyframes comingIn {
+            0% { transform: translateX(40px) scale(0.95); opacity: 0.5; }
+            100% { transform: translateX(0) scale(1); opacity: 1; }
+        }
+
+        /* MOBILE FIXES */
+        @media (max-width: 1024px) {
+            .teaser-card { flex: 0 0 100%; }
+            .teaser-peek { display: none; }
+            
+            /* Add vertical space on mobile to prevent Drive's player toolbars from cropping the video */
+            .video-container {
+                aspect-ratio: 4 / 3; 
+            }
+            
+            /* Move carousel buttons below the video on mobile so they don't block the play button */
+            .teaser-carousel-container { padding-bottom: 70px; }
+            .video-nav {
+                top: auto;
+                bottom: 0;
+                transform: none;
+                width: 50px;
+                height: 50px;
+            }
+            .video-nav:hover { transform: scale(1.1); }
+            .video-nav.prev { left: 35%; transform: translateX(-50%); }
+            .video-nav.next { right: 35%; transform: translateX(50%); }
+        }
+    </style>
+</head>
+<body class="antialiased opacity-0 transition-opacity duration-700 ease-in-out">
+
+    <!-- Background Slideshow -->
+    <div id="bg-slideshow" class="fixed inset-0 z-[-2] opacity-25 pointer-events-none select-none overflow-hidden">
+        <!-- JS will populate images here -->
+    </div>
+
+    <!-- Interactive Background -->
+    <canvas id="neuralCanvas"></canvas>
+
+    <!-- LIGHTBOX MODAL -->
+    <div id="lightbox" class="hidden fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm" onclick="closeLightbox()">
+        <button class="absolute top-4 right-4 md:top-6 md:right-6 text-white text-4xl hover:text-brand-accent transition-colors z-50 p-2" onclick="closeLightbox()">&times;</button>
+        <img id="lightbox-img" src="" class="max-w-full max-h-full object-contain rounded-sm shadow-2xl border border-gray-800" alt="Full View">
+    </div>
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 glass">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row items-center justify-between h-auto md:h-20 py-3 md:py-0">
+                <div class="flex items-center justify-between w-full md:w-auto">
+                    <!-- Logo -->
+                    <div class="flex-shrink-0 mb-3 md:mb-0 cursor-pointer" onclick="switchView('main')">
+                        <a href="#" class="text-xl md:text-2xl font-bold tracking-widest serif text-white">
+                            EASY <span class="text-brand-accent">DIGITAL</span>
+                        </a>
+                        <div class="text-[10px] text-gray-400 tracking-wider -mt-1 text-left">BY DEEPAK SONI</div>
+                    </div>
+                    
+                    <!-- Language Toggle (Mobile Visible) -->
+                    <button onclick="toggleLanguage()" class="md:hidden text-xs font-bold border border-cyan-400 text-cyan-400 px-3 py-1.5 rounded-full hover:bg-cyan-400/20 ml-4 transition-all shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+                        <span id="lang-btn-mobile">EN | HI</span>
+                    </button>
+                </div>
+                
+                <!-- Menu Links (Improved Mobile Touch Targets) -->
+                <div class="w-full md:w-auto overflow-x-auto no-scrollbar">
+                    <div class="flex items-center space-x-6 whitespace-nowrap px-2 pb-2 md:pb-0">
+                        <a href="#home" onclick="switchView('main')" class="hover:text-brand-accent transition-colors py-2 text-xs md:text-xs uppercase tracking-widest font-semibold" data-i18n="nav_home">Home</a>
+                        <a href="#about" onclick="switchView('main')" class="hover:text-brand-accent transition-colors py-2 text-xs md:text-xs uppercase tracking-widest font-semibold" data-i18n="nav_about">About</a>
+                        <a href="#services" onclick="switchView('main')" class="hover:text-brand-accent transition-colors py-2 text-xs md:text-xs uppercase tracking-widest font-semibold" data-i18n="nav_services">Services</a>
+                        <a href="#" onclick="switchView('gallery')" class="hover:text-brand-accent transition-colors py-2 text-xs md:text-xs uppercase tracking-widest font-semibold" data-i18n="nav_gallery">Gallery</a>
+                        <a href="#pricing" onclick="switchView('main')" class="hover:text-brand-accent transition-colors py-2 text-xs md:text-xs uppercase tracking-widest font-semibold" data-i18n="nav_packages">Packages</a>
+                        <a href="#faq" onclick="switchView('main')" class="hover:text-brand-accent transition-colors py-2 text-xs md:text-xs uppercase tracking-widest font-semibold" data-i18n="nav_faq">FAQ</a>
+                        
+                        <!-- Desktop Lang Toggle -->
+                        <button onclick="toggleLanguage()" class="hidden md:inline-block text-[10px] font-bold border border-cyan-400 text-cyan-400 px-3 py-1.5 rounded hover:bg-cyan-400/20 transition-all shadow-[0_0_10px_rgba(6,182,212,0.3)] cursor-pointer">
+                            <span id="lang-btn-desktop">EN | HI</span>
+                        </button>
+
+                        <a href="#contact" onclick="switchView('main')" class="bg-brand-accent hover:bg-blue-600 text-white px-5 py-2 md:px-5 md:py-2 rounded-none text-xs md:text-xs uppercase tracking-widest font-bold transition-all shadow-lg shadow-blue-500/30 ml-2" data-i18n="nav_book">Book Date</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN LANDING VIEW -->
+    <div id="main-view">
+        <!-- 1. HOME / INTRO -->
+        <!-- Fixed overlapping navbar issue on mobile with pt-32 instead of pt-20 -->
+        <section id="home" class="min-h-screen flex items-center justify-center relative px-4 pt-32 md:pt-20 pb-16">
+            <div class="text-center z-10 max-w-5xl">
+                <p class="text-brand-accent tracking-[0.3em] uppercase text-xs md:text-sm mb-6 font-bold" data-i18n="hero_badge">Premium Wedding Cinematography</p>
+                <h1 class="text-4xl md:text-7xl font-bold mb-8 leading-tight">
+                    <span data-i18n="hero_title_1">From</span> <span class="text-cyan-400" data-i18n="hero_haldi">Haldi</span> <span data-i18n="hero_to">to</span> <span class="text-blue-500" data-i18n="hero_reception">Reception</span>,<br> 
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-100 to-white" data-i18n="hero_subtitle">We Capture Your Soul.</span>
+                </h1>
+                <p class="text-gray-400 text-base md:text-xl mb-10 max-w-2xl mx-auto font-light leading-relaxed" data-i18n="hero_desc">
+                    Welcome to <strong>Easy Digital Studios</strong>. Under the vision of <strong>Deepak Soni</strong>, we turn your Big Indian Wedding into a cinematic masterpiece that lasts forever.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button onclick="switchView('gallery')" class="px-8 py-4 border border-blue-500/30 text-blue-100 hover:bg-blue-600 hover:border-blue-600 transition-all duration-300 uppercase tracking-widest text-xs font-bold" data-i18n="btn_portfolio">View Shaadi Portfolio</button>
+                    <a href="#contact" class="px-8 py-4 bg-brand-accent text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all duration-300 uppercase tracking-widest text-xs font-bold" data-i18n="btn_check">Check Availability</a>
+                </div>
+            </div>
+            <!-- Scroll indicator -->
+            <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 animate-bounce text-blue-400 hidden md:block">
+                <i class="fas fa-chevron-down text-2xl"></i>
+            </div>
+        </section>
+
+        <!-- 2. ABOUT US -->
+        <!-- Fixed padding for mobile py-16 instead of py-24 -->
+        <section id="about" class="py-16 md:py-24 relative bg-black/30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex flex-col md:flex-row gap-12 md:gap-16 items-center">
+                    <div class="w-full md:w-1/2 relative">
+                        <div class="absolute -inset-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg opacity-30 blur-lg"></div>
+                        <!-- Responsive image height fix -->
+                        <img 
+                            src="https://drive.google.com/thumbnail?id=11QYkrWrVNOy6tuabTM5c3NVzh2j1kl3a&sz=w1000" 
+                            alt="Deepak Soni" 
+                            class="relative rounded-lg shadow-2xl grayscale hover:grayscale-0 transition-all duration-500 w-full object-cover h-[300px] sm:h-[400px] md:h-[500px]"
+                        >
+                        <div class="absolute bottom-4 left-4 bg-black/80 px-4 py-2 text-white text-sm font-bold border-l-4 border-brand-accent" data-i18n="about_founder_tag">Deepak Soni, Founder</div>
+                    </div>
+                    <div class="w-full md:w-1/2">
+                        <div class="section-title flex items-center mb-6">
+                            <span></span>
+                            <h2 class="text-2xl md:text-3xl font-bold uppercase tracking-wider text-white" data-i18n="about_title">The Man Behind the Lens</h2>
+                        </div>
+                        <h3 class="text-2xl md:text-4xl serif mb-6 leading-snug" data-i18n="about_quote">"Every photo is a timeless memory." — Deepak Soni</h3>
+                        <p class="text-gray-400 mb-6 leading-relaxed" data-i18n="about_text1">
+                            Established by <strong>Deepak Soni</strong> in 2000, Easy Digital Studios has become a household name for premium photography. With over two decades of experience in capturing the vibrant chaos and beauty of Indian weddings, Deepak brings a unique artistic vision to every event.
+                        </p>
+                        <!-- Adjusted stat grid gap for small mobile screens -->
+                        <div class="grid grid-cols-3 gap-2 sm:gap-6 border-t border-blue-900/50 pt-8">
+                            <div>
+                                <div class="text-2xl sm:text-3xl font-bold text-brand-accent">25+</div>
+                                <div class="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider mt-1" data-i18n="stat_years">Years</div>
+                            </div>
+                            <div>
+                                <div class="text-2xl sm:text-3xl font-bold text-brand-accent">1000+</div>
+                                <div class="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider mt-1" data-i18n="stat_couples">Happy Couples</div>
+                            </div>
+                            <div>
+                                <div class="text-2xl sm:text-3xl font-bold text-brand-accent" data-i18n="stat_pan">Pan</div>
+                                <div class="text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider mt-1" data-i18n="stat_india">India Coverage</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ALBUM PREVIEW -->
+        <section class="py-16 relative border-t border-gray-900 bg-gradient-to-b from-black to-blue-900/10">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="text-center mb-10">
+                    <span class="text-brand-accent tracking-widest uppercase text-xs font-bold" data-i18n="album_badge">Premium Experience</span>
+                    <h2 class="text-3xl serif font-bold mt-2" data-i18n="album_title">Digital Album Preview</h2>
+                    <p class="text-gray-400 text-sm mt-2" data-i18n="album_desc">Experience our signature 12x36" layouts in Textbook Mode.<br class="md:hidden">Swipe or use arrows to turn.</p>
+                </div>
+
+                <div class="album-perspective" id="albumContainer">
+                    <div class="album-fullscreen-close" onclick="toggleAlbumFullscreen()"><i class="fas fa-times"></i></div>
+                    <div class="rotate-hint"><i class="fas fa-sync-alt mr-2 animate-spin"></i> Rotate phone for best view</div>
+                    <div class="album-book" id="digitalAlbum">
+                        <div class="album-base-left"><div class="w-full h-full relative overflow-hidden"><img src="" class="page-img" alt="Base Left"><div class="page-lighting"></div></div></div>
+                        <div class="album-base-right"><div class="w-full h-full relative overflow-hidden"><img src="" class="page-img" alt="Base Right"><div class="page-lighting"></div></div></div>
+                        <!-- Leaves Generated by JS -->
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4 md:gap-6 mt-8">
+                    <button id="prevBtn" class="w-12 h-12 rounded-full border border-gray-600 flex items-center justify-center hover:bg-brand-accent hover:border-brand-accent transition-all text-white"><i class="fas fa-arrow-left"></i></button>
+                    <button id="fullscreenBtn" onclick="toggleAlbumFullscreen()" class="w-12 h-12 rounded-full border border-gray-600 flex items-center justify-center hover:bg-cyan-500 hover:border-cyan-500 transition-all text-white"><i class="fas fa-expand"></i></button>
+                    <button id="nextBtn" class="w-12 h-12 rounded-full border border-gray-600 flex items-center justify-center hover:bg-brand-accent hover:border-brand-accent transition-all text-white"><i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+        </section>
+
+        <!-- CINEMATIC TEASER SECTION -->
+        <section class="py-16 md:py-24 relative overflow-hidden bg-black/20 border-y border-white/5" id="video-section">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="text-center mb-12">
+                    <span class="text-brand-accent tracking-widest uppercase text-xs font-bold" data-i18n="teaser_badge">Cinema in Motion</span>
+                    <h2 class="text-3xl md:text-4xl serif font-bold mt-2" data-i18n="teaser_title">Cinematic Masterpiece</h2>
+                    <p class="text-gray-400 text-sm md:text-base mt-4 max-w-xl mx-auto" data-i18n="teaser_desc">A glimpse into the soulful stories we capture through our lens.</p>
+                </div>
+
+                <div class="teaser-carousel-container" id="video-carousel-root">
+                    <!-- Navigation -->
+                    <div class="video-nav prev" onclick="changeTeaser(-1)"><i class="fas fa-chevron-left"></i></div>
+                    <div class="video-nav next" onclick="changeTeaser(1)"><i class="fas fa-chevron-right"></i></div>
+
+                    <!-- Main Video Card - Center Balanced -->
+                    <div class="teaser-card glass-card p-2 rounded-2xl overflow-hidden relative cursor-pointer" id="main-video-card" onclick="playTeaser(this)">
+                        <div class="video-container rounded-xl">
+                            <div class="video-wrapper">
+                                <iframe id="teaser-iframe" src="https://drive.google.com/file/d/1uxQV0KraT3ht2xWZTSzSA40ilJrRoP2f/preview" allow="autoplay; fullscreen" allowfullscreen="true"></iframe>
+                            </div>
+                            <!-- Custom Play Overlay -->
+                            <div class="teaser-overlay absolute inset-0 bg-black/70 flex items-center justify-center transition-all hover:bg-black/40">
+                                <div class="w-16 h-16 md:w-20 md:h-20 rounded-full bg-brand-accent/90 text-white flex items-center justify-center shadow-[0_0_40px_rgba(59,130,246,0.6)] transform transition-transform hover:scale-110">
+                                    <i class="fas fa-play text-xl md:text-2xl ml-1"></i>
+                                </div>
+                                <div class="absolute bottom-4 left-4 md:bottom-6 md:left-6 text-[10px] md:text-xs uppercase tracking-[0.2em] font-bold text-white/70" id="teaser-counter">Video 1 / 9</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Peek Preview Card - Blurred on Right -->
+                    <div class="teaser-peek glass-card p-2 rounded-2xl overflow-hidden" id="peek-video-card">
+                        <div class="video-container rounded-xl">
+                            <div class="video-wrapper">
+                                <iframe id="peek-iframe" src="https://drive.google.com/file/d/154NAyp2nEHgIZkiFMTpNjoGlNCeFuN2v/preview" tabindex="-1"></iframe>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. SERVICES -->
+        <section id="services" class="py-16 md:py-24 relative">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16 md:mb-20">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-4 serif" data-i18n="services_title">Our Services</h2>
+                    <p class="text-gray-400 max-w-2xl mx-auto text-sm md:text-base" data-i18n="services_subtitle">Complete coverage for your special days.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div>
+                        <h3 class="text-2xl font-bold mb-8 flex items-center text-blue-300" data-i18n="srv_photo_title"><i class="fas fa-camera-retro mr-4"></i> Photography</h3>
+                        <div class="space-y-6">
+                            <div class="glass-card p-6 md:p-8 rounded-lg group">
+                                <h4 class="text-lg md:text-xl font-bold mb-2 group-hover:text-brand-accent transition-colors" data-i18n="srv_candid_title">Candid Wedding Photography</h4>
+                                <p class="text-gray-400 text-sm" data-i18n="srv_candid_desc">Capturing raw emotions during Phere, Sindoor, and Vidaai without you noticing we are there.</p>
+                            </div>
+                            <div class="glass-card p-6 md:p-8 rounded-lg group">
+                                <h4 class="text-lg md:text-xl font-bold mb-2 group-hover:text-brand-accent transition-colors" data-i18n="srv_prewed_title">Pre-Wedding Shoots</h4>
+                                <p class="text-gray-400 text-sm" data-i18n="srv_prewed_desc">Romantic shoots in Udaipur, Goa, or scenic local spots. Tell your love story your way.</p>
+                            </div>
+                            <div class="glass-card p-6 md:p-8 rounded-lg group">
+                                <h4 class="text-lg md:text-xl font-bold mb-2 group-hover:text-brand-accent transition-colors" data-i18n="srv_bday_title">Birthday Shoots</h4>
+                                <p class="text-gray-400 text-sm" data-i18n="srv_bday_desc">Capture the joy of your special day with our creative birthday photography.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold mb-8 flex items-center text-cyan-300" data-i18n="srv_video_title"><i class="fas fa-video mr-4"></i> Cinematography</h3>
+                        <div class="space-y-6">
+                            <div class="glass-card p-6 md:p-8 rounded-lg group">
+                                <h4 class="text-lg md:text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors" data-i18n="srv_film_title">Cinematic Wedding Films</h4>
+                                <p class="text-gray-400 text-sm" data-i18n="srv_film_desc">4K films that look like Bollywood movies. Drone shots, slow motion, and perfect music.</p>
+                            </div>
+                            <div class="glass-card p-6 md:p-8 rounded-lg group">
+                                <h4 class="text-lg md:text-xl font-bold mb-2 group-hover:text-cyan-400 transition-colors" data-i18n="srv_trad_title">Traditional Videography</h4>
+                                <p class="text-gray-400 text-sm" data-i18n="srv_trad_desc">Full coverage documentation of the entire event rituals from start to finish.</p>
+                            </div>
+                            <div class="p-6 md:p-8 rounded-lg border border-dashed border-gray-600 mt-8 bg-blue-900/10">
+                                <h4 class="text-lg md:text-xl font-bold mb-2 text-white" data-i18n="srv_combo_title">✨ Shadi Combo Package</h4>
+                                <p class="text-gray-400 text-sm mb-4" data-i18n="srv_combo_desc">Book Photo + Video for Haldi, Sangeet & Wedding together for a special discount.</p>
+                                <a href="#contact" class="text-brand-accent text-sm font-bold uppercase tracking-wide hover:text-white" data-i18n="srv_combo_btn">Call Deepak Sir Now &rarr;</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. HOMEPAGE TEASER GALLERY -->
+        <section id="gallery-teaser" class="py-16 md:py-24 relative bg-black/40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12 md:mb-16">
+                    <h2 class="text-3xl md:text-4xl serif font-bold mb-2" data-i18n="gallery_title">Featured Masterpieces</h2>
+                    <div class="w-16 h-1 bg-brand-accent mx-auto mt-4"></div>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <div class="group relative overflow-hidden rounded-sm cursor-pointer aspect-[4/3] bg-black/50" onclick="switchView('gallery')">
+                        <img src="https://drive.google.com/thumbnail?id=1Iv0TAYdjXkzPzqtAH972hfSxK3UQ1cWD&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110" alt="Wedding Teaser 1">
+                    </div>
+                    <div class="group relative overflow-hidden rounded-sm cursor-pointer aspect-[4/3] bg-black/50" onclick="switchView('gallery')">
+                        <img src="https://drive.google.com/thumbnail?id=1LUpsS1zeE8ZUa_KNnUypgVxDr6mcTP5D&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110" alt="Wedding Teaser 2">
+                    </div>
+                    <div class="hidden sm:block md:hidden group relative overflow-hidden rounded-sm cursor-pointer aspect-[4/3] bg-black/50" onclick="switchView('gallery')">
+                        <!-- Extra item to balance 2-col grid on tablet -->
+                        <img src="https://drive.google.com/thumbnail?id=1V-TAlYta71xAZ0qaT1ODlObIujDn25xx&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110" alt="Wedding Teaser Extra">
+                    </div>
+                    <div class="group relative overflow-hidden rounded-sm cursor-pointer aspect-[4/3] bg-black/50" onclick="switchView('gallery')">
+                        <img src="https://drive.google.com/thumbnail?id=1Uf4qs77fsVhlwTGB5UqbpDydfMFc6FuS&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110" alt="Wedding Teaser 3">
+                    </div>
+                </div>
+                
+                <div class="text-center mt-12">
+                    <button onclick="switchView('gallery')" class="inline-block px-8 py-3 border border-white/20 hover:bg-white hover:text-black transition-all text-sm uppercase tracking-widest cursor-pointer" data-i18n="btn_full_gallery">View Full Gallery <i class="fab fa-instagram ml-2"></i></button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. PRICING -->
+        <section id="pricing" class="py-16 md:py-24 relative">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-12 md:mb-16">
+                    <h2 class="text-3xl md:text-4xl serif font-bold" data-i18n="pricing_title">Investment</h2>
+                    <p class="text-gray-400 mt-4 text-sm md:text-base" data-i18n="pricing_subtitle">Transparent Pricing (Approximate)</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Basic -->
+                    <div class="glass-card p-6 md:p-8 rounded-xl text-center border-t-4 border-gray-600">
+                        <h3 class="text-lg md:text-xl font-bold uppercase tracking-widest mb-4" data-i18n="pkg_1_name">BEST SAVER</h3>
+                        <div class="text-3xl md:text-4xl font-bold text-white mb-2">₹40,000</div>
+                        <p class="text-gray-400 text-xs mb-8" data-i18n="pkg_1_desc">Value Package</p>
+                        <ul class="text-left space-y-4 mb-8 text-gray-300 text-sm">
+                            <li class="flex items-center"><i class="fas fa-check text-blue-500 mr-3"></i> <span data-i18n="pkg_feat_trad">Traditional Photo & Video</span></li>
+                            <li class="flex items-center"><i class="fas fa-check text-blue-500 mr-3"></i> <span data-i18n="pkg_feat_album">40 Sheet Album (Glossy, 12x36")</span></li>
+                            <li class="flex items-center"><i class="fas fa-check text-blue-500 mr-3"></i> <span data-i18n="pkg_feat_2day">2 Day Coverage</span></li>
+                            <li class="flex items-center"><i class="fas fa-check text-blue-500 mr-3"></i> <span data-i18n="pkg_feat_lite">Lite Candid & Cine Shots</span></li>
+                        </ul>
+                        <a href="#contact" class="block w-full py-3 border border-gray-600 hover:border-white hover:text-white text-gray-400 transition-all text-sm font-bold uppercase" data-i18n="btn_book">Book Now</a>
+                    </div>
+                    <!-- Popular -->
+                    <div class="glass-card p-6 md:p-8 rounded-xl text-center border-t-4 border-brand-accent transform md:-translate-y-4 relative bg-blue-900/20 mt-4 md:mt-0">
+                        <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-brand-accent text-white px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full shadow-lg" data-i18n="pkg_badge">Most Popular</div>
+                        <h3 class="text-lg md:text-xl font-bold uppercase tracking-widest mb-4" data-i18n="pkg_2_name">CINEMATIC CLASSIC</h3>
+                        <div class="text-3xl md:text-4xl font-bold text-brand-accent mb-2">₹80,000</div>
+                        <p class="text-gray-400 text-xs mb-8" data-i18n="pkg_2_desc">Premium Coverage</p>
+                        <ul class="text-left space-y-4 mb-8 text-gray-300 text-sm">
+                            <li class="flex items-center"><i class="fas fa-check text-brand-accent mr-3"></i> <span data-i18n="pkg_feat_trad_candid">Traditional + Candid Photo</span></li>
+                            <li class="flex items-center"><i class="fas fa-check text-brand-accent mr-3"></i> <span data-i18n="pkg_feat_cine_teaser">Cinematic Video + Teaser</span></li>
+                            <li class="flex items-center"><i class="fas fa-check text-brand-accent mr-3"></i> <span data-i18n="pkg_feat_2day">2 Day Coverage</span></li>
+                            <li class="flex items-center"><i class="fas fa-check text-brand-accent mr-3"></i> <span data-i18n="pkg_feat_album">40 Sheet Album (Glossy, 12x36")</span></li>
+                            <li class="flex items-center"><i class="fas fa-check text-brand-accent mr-3"></i> <span data-i18n="pkg_feat_trad_vid">Traditional Video Coverage</span></li>
+                        </ul>
+                        <a href="#contact" class="block w-full py-3 bg-brand-accent hover:bg-blue-600 text-white transition-all text-sm font-bold uppercase shadow-lg shadow-blue-500/30" data-i18n="btn_book">Book Now</a>
+                    </div>
+                    <!-- Premium -->
+                    <div class="glass-card p-6 md:p-8 rounded-xl text-center border-t-4 border-cyan-400">
+                        <h3 class="text-lg md:text-xl font-bold uppercase tracking-widest mb-4" data-i18n="pkg_3_name">ROYAL ELITE</h3>
+                        <div class="text-3xl md:text-4xl font-bold text-white mb-2">₹1,05,000</div>
+                        <p class="text-gray-400 text-xs mb-8" data-i18n="pkg_3_desc">The Ultimate Experience</p>
+                        <ul class="text-left space-y-4 mb-8 text-gray-300 text-sm">
+                            <li class="flex items-center"><i class="fas fa-check text-cyan-400 mr-3"></i> <span data-i18n="pkg_feat_all_pv">Traditional + Candid Photo/Video</span></li>
+                            <li class="flex items-center"><i class="fas fa-check text-cyan-400 mr-3"></i> <span data-i18n="pkg_feat_cine_teaser">Cinematic Video + Teaser</span></li>
+                            <li class="flex items-center"><i class="fas fa-check text-cyan-400 mr-3"></i> <span data-i18n="pkg_feat_2day">2 Day Coverage</span></li>
+                            <li class="flex items-center"><i class="fas fa-check text-cyan-400 mr-3"></i> <span data-i18n="pkg_feat_prewed">Pre-Wedding Shoot</span></li>
+                            <li class="flex items-center"><i class="fas fa-check text-cyan-400 mr-3"></i> <span data-i18n="pkg_feat_drone">Drone Coverage</span></li>
+                            <li class="flex items-center"><i class="fas fa-check text-cyan-400 mr-3"></i> <span data-i18n="pkg_feat_album">40 Sheet Album (Glossy, 12x36")</span></li>
+                        </ul>
+                        <a href="#contact" class="block w-full py-3 border border-gray-600 hover:border-white hover:text-white text-gray-400 transition-all text-sm font-bold uppercase" data-i18n="btn_inquire">Inquire</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. TESTIMONIALS & FAQ & CONTACT -->
+        <section class="py-16 md:py-24 bg-brand-blue/10 border-y border-white/5">
+            <div class="max-w-4xl mx-auto px-4 text-center">
+                <i class="fas fa-quote-left text-3xl md:text-4xl text-brand-accent mb-6 md:mb-8 opacity-50"></i>
+                <h2 class="text-2xl md:text-4xl serif italic mb-8 leading-relaxed" data-i18n="testimonial_text">"Deepak ji and his team were amazing! They captured our wedding so beautifully, especially the vidaai moments. The photos look like a movie."</h2>
+                <div class="flex items-center justify-center gap-4">
+                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-cyan-600 flex items-center justify-center font-bold text-base md:text-lg">P</div>
+                    <div class="text-left">
+                        <div class="font-bold text-white text-sm md:text-base">Priya & Rahul Sharma</div>
+                        <div class="text-xs md:text-sm text-gray-400" data-i18n="testimonial_loc">Married in Jaipur, 2023</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="faq" class="py-16 md:py-24 relative">
+            <div class="max-w-3xl mx-auto px-4">
+                <div class="text-center mb-12 md:mb-16">
+                    <h2 class="text-3xl font-bold" data-i18n="faq_title">Frequently Asked Questions</h2>
+                </div>
+                <div class="space-y-4">
+                    <details class="faq-item glass p-4 md:p-5 rounded-lg cursor-pointer group">
+                        <summary class="font-bold text-base md:text-lg flex justify-between items-center text-gray-200 group-hover:text-brand-accent">
+                            <span data-i18n="faq_q1">Do you travel outside the city for weddings?</span>
+                            <i class="fas fa-chevron-down transform group-open:rotate-180 transition-transform ml-4"></i>
+                        </summary>
+                        <p class="mt-4 text-gray-400 text-sm md:text-base leading-relaxed" data-i18n="faq_a1">Yes! We cover destination weddings across India. Travel and stay charges will be extra as per actuals.</p>
+                    </details>
+                    <details class="faq-item glass p-4 md:p-5 rounded-lg cursor-pointer group">
+                        <summary class="font-bold text-base md:text-lg flex justify-between items-center text-gray-200 group-hover:text-brand-accent">
+                            <span data-i18n="faq_q2">How many days for photo delivery?</span>
+                            <i class="fas fa-chevron-down transform group-open:rotate-180 transition-transform ml-4"></i>
+                        </summary>
+                        <p class="mt-4 text-gray-400 text-sm md:text-base leading-relaxed" data-i18n="faq_a2">We provide 10-20 pics within 1 week for your social media. The full album and videos usually take 3-4 weeks.</p>
+                    </details>
+                    <details class="faq-item glass p-4 md:p-5 rounded-lg cursor-pointer group">
+                        <summary class="font-bold text-base md:text-lg flex justify-between items-center text-gray-200 group-hover:text-brand-accent">
+                            <span data-i18n="faq_q3">What is the booking advance?</span>
+                            <i class="fas fa-chevron-down transform group-open:rotate-180 transition-transform ml-4"></i>
+                        </summary>
+                        <p class="mt-4 text-gray-400 text-sm md:text-base leading-relaxed" data-i18n="faq_a3">25% on booking, 50% when the program starts, and the remaining 25% on final delivery.</p>
+                    </details>
+                </div>
+            </div>
+        </section>
+
+        <section id="contact" class="py-16 md:py-24 relative">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="glass p-6 md:p-16 rounded-3xl border border-blue-900/50 shadow-2xl bg-gradient-to-br from-slate-900/90 to-blue-900/20">
+                    <div class="flex flex-col md:flex-row gap-12">
+                        <div class="w-full md:w-2/3">
+                            <div class="mb-8 md:mb-10">
+                                <h2 class="text-3xl font-bold mb-3 md:mb-4" data-i18n="contact_title">Book Your Dates</h2>
+                                <p class="text-gray-400 text-sm md:text-base" data-i18n="contact_subtitle">Deepak Soni and the team are ready to capture your moments.</p>
+                            </div>
+                            <!-- FORM FIX: All text inputs now use text-base (16px) to prevent iOS auto-zooming -->
+                            <form id="contactForm" class="space-y-6">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2" data-i18n="lbl_name">Your Name</label>
+                                        <input type="text" id="name" class="w-full bg-black/40 border border-gray-700 rounded-sm px-4 py-3 text-base md:text-sm text-white focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-colors" placeholder="Name">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2" data-i18n="lbl_phone">Phone Number</label>
+                                        <input type="tel" id="phone" class="w-full bg-black/40 border border-gray-700 rounded-sm px-4 py-3 text-base md:text-sm text-white focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-colors" placeholder="+91 98765 43210">
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2" data-i18n="lbl_email">Your Email</label>
+                                        <input type="email" id="email" class="w-full bg-black/40 border border-gray-700 rounded-sm px-4 py-3 text-base md:text-sm text-white focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-colors" placeholder="email@example.com">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2" data-i18n="lbl_date">Event Date</label>
+                                        <input type="date" id="date" class="w-full bg-black/40 border border-gray-700 rounded-sm px-4 py-3 text-base md:text-sm text-gray-400 focus:outline-none focus:border-brand-accent transition-colors">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2" data-i18n="lbl_type">Event Type</label>
+                                    <select id="type" class="w-full bg-black/40 border border-gray-700 rounded-sm px-4 py-3 text-base md:text-sm text-white focus:outline-none focus:border-brand-accent transition-colors">
+                                        <option>Wedding (Shaadi)</option>
+                                        <option>Engagement / Roka</option>
+                                        <option>Pre-Wedding Shoot</option>
+                                        <option>Birthday / Party</option>
+                                        <option>Commercial Shoot</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2" data-i18n="lbl_msg">Message</label>
+                                    <textarea id="message" rows="4" class="w-full bg-black/40 border border-gray-700 rounded-sm px-4 py-3 text-base md:text-sm text-white focus:outline-none focus:border-brand-accent transition-colors" placeholder="Tell us about your event details..."></textarea>
+                                </div>
+                                <div class="flex flex-col md:flex-row gap-4">
+                                    <button type="button" onclick="sendToWhatsapp()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-sm uppercase tracking-widest transition-all duration-300 shadow-lg shadow-green-600/30 flex items-center justify-center gap-2">
+                                        <i class="fab fa-whatsapp text-xl"></i> WhatsApp
+                                    </button>
+                                    <button type="button" onclick="sendToMail()" class="flex-1 bg-brand-accent hover:bg-blue-600 text-white font-bold py-4 rounded-sm uppercase tracking-widest transition-all duration-300 shadow-lg shadow-blue-500/30 flex items-center justify-center gap-2">
+                                        <i class="fas fa-envelope text-xl"></i> Email
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="w-full md:w-1/3 flex flex-col justify-between border-t md:border-t-0 md:border-l border-gray-800 md:pl-12 pt-10 md:pt-0">
+                            <div>
+                                <h3 class="text-xl font-bold mb-6" data-i18n="contact_info">Contact Info</h3>
+                                <ul class="space-y-6">
+                                    <li class="flex items-start">
+                                        <i class="fas fa-map-marker-alt text-brand-accent mt-1 mr-4"></i>
+                                        <div>
+                                            <span class="block text-gray-400 text-sm" data-i18n="lbl_address">Studio Address</span>
+                                            <span class="text-white text-sm md:text-base" data-i18n="address_val">Shop no 3 Arihant Complex, Kolar Road,<br>in front of Aapurti, Bhopal, Madhya Pradesh 462042</span>
+                                        </div>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-phone-alt text-brand-accent mt-1 mr-4"></i>
+                                        <div>
+                                            <span class="block text-gray-400 text-sm" data-i18n="lbl_mobile">Mobile</span>
+                                            <span class="text-white text-sm md:text-base">+91 9826353400</span>
+                                        </div>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-envelope text-brand-accent mt-1 mr-4"></i>
+                                        <div>
+                                            <span class="block text-gray-400 text-sm">Email</span>
+                                            <span class="text-white text-sm md:text-base break-all">neeludeepak026@gmail.com</span>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="mt-12">
+                                <h3 class="text-xl font-bold mb-4" data-i18n="follow_us">Follow Us</h3>
+                                <div class="flex space-x-4">
+                                    <a href="#" class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-brand-accent transition-colors text-white"><i class="fab fa-instagram"></i></a>
+                                    <a href="#" class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-brand-accent transition-colors text-white"><i class="fab fa-facebook-f"></i></a>
+                                    <a href="#" class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-brand-accent transition-colors text-white"><i class="fab fa-youtube"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div> <!-- END MAIN VIEW -->
+
+    <!-- SEPARATE GALLERY VIEW (FULL PORTFOLIO - RESTORED ALL 29 ITEMS) -->
+    <div id="gallery-view" class="hidden min-h-screen pt-28 px-4 pb-12">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-12 text-center md:text-left">
+                <div>
+                    <h2 class="text-3xl md:text-5xl serif font-bold" data-i18n="full_gallery_title">Full Portfolio</h2>
+                    <p class="text-gray-400 mt-2 text-sm md:text-base" data-i18n="full_gallery_subtitle">A curated collection of our finest moments.</p>
+                </div>
+                <button onclick="switchView('main')" class="mt-6 md:mt-0 flex items-center text-sm font-bold uppercase tracking-widest text-brand-accent hover:text-white transition-colors bg-blue-900/20 px-4 py-2 rounded-full md:bg-transparent md:px-0 md:py-0">
+                    <i class="fas fa-arrow-left mr-2"></i> <span data-i18n="btn_back_home">Back to Home</span>
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 auto-rows-[250px] md:auto-rows-[300px]">
+                <!-- ROW 1 -->
+                <div class="md:col-span-2 group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1Iv0TAYdjXkzPzqtAH972hfSxK3UQ1cWD&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1Iv0TAYdjXkzPzqtAH972hfSxK3UQ1cWD&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 1">
+                </div>
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1LUpsS1zeE8ZUa_KNnUypgVxDr6mcTP5D&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1LUpsS1zeE8ZUa_KNnUypgVxDr6mcTP5D&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 2">
+                </div>
+
+                <!-- ROW 2 -->
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1Uf4qs77fsVhlwTGB5UqbpDydfMFc6FuS&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1Uf4qs77fsVhlwTGB5UqbpDydfMFc6FuS&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 3">
+                </div>
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1V-TAlYta71xAZ0qaT1ODlObIujDn25xx&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1V-TAlYta71xAZ0qaT1ODlObIujDn25xx&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 4">
+                </div>
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1VCpFCiBrObcpx5a-Gpuz6dGS9RXkatOo&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1VCpFCiBrObcpx5a-Gpuz6dGS9RXkatOo&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 5">
+                </div>
+
+                <!-- ROW 3 -->
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1ZS9it1jjos-H1CV8SuG_qt3ZQEVeopjZ&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1ZS9it1jjos-H1CV8SuG_qt3ZQEVeopjZ&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 6">
+                </div>
+                <div class="md:col-span-2 group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1ehFWVnBy8frzSccTWv6A0NW8LfHtvdFI&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1ehFWVnBy8frzSccTWv6A0NW8LfHtvdFI&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 7">
+                </div>
+
+                <!-- ROW 4 -->
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1hLIYC4MIaS_LRLyk4St6GMPFCR3YZXfo&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1hLIYC4MIaS_LRLyk4St6GMPFCR3YZXfo&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 8">
+                </div>
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1hQ3AuV1Twi0RwIFToXppSRmj0DoYl5sx&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1hQ3AuV1Twi0RwIFToXppSRmj0DoYl5sx&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-110" alt="Gallery 9">
+                </div>
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1kG4L4JIc9d4zd6Nyml69S5UX1F6K4Aab&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1kG4L4JIc9d4zd6Nyml69S5UX1F6K4Aab&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 10">
+                </div>
+
+                <!-- ROW 5 -->
+                <div class="md:col-span-2 group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1n-5zMVSd3WKrjslHhKACm1z08qhI1Mh_&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1n-5zMVSd3WKrjslHhKACm1z08qhI1Mh_&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 11">
+                </div>
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=11IplF8dmYVAxkhGwO4qkHaAFe97CkKba&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=11IplF8dmYVAxkhGwO4qkHaAFe97CkKba&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 12">
+                </div>
+
+                <!-- ROW 6 -->
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=14H9UEc6yUXZSBVrLPVi4Tij73o-XaVlM&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=14H9UEc6yUXZSBVrLPVi4Tij73o-XaVlM&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 13">
+                </div>
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=14MCjYA3rPbmVL4euGJWeEP9OZwHshVxb&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=14MCjYA3rPbmVL4euGJWeEP9OZwHshVxb&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 14">
+                </div>
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=160dKw1h6p-KE4DGOhNiktDvrhof-H52s&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=160dKw1h6p-KE4DGOhNiktDvrhof-H52s&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 15">
+                </div>
+
+                <!-- ROW 7 -->
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=18S1GFqJ0XhKF76Juz6czaUpduLIsUlK-&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=18S1GFqJ0XhKF76Juz6czaUpduLIsUlK-&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 16">
+                </div>
+                <div class="md:col-span-2 group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1B0wM13fVHQmXiUUL5PbQEDd6zdNbRmJ6&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1B0wM13fVHQmXiUUL5PbQEDd6zdNbRmJ6&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 17">
+                </div>
+
+                <!-- ROW 8 -->
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1IcW_7wLq82plsMF0uURC8d9ZJ3pradkO&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1IcW_7wLq82plsMF0uURC8d9ZJ3pradkO&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 18">
+                </div>
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1LOaZDmU1GZC5zR7oUqLI12XUvVgLyafG&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1LOaZDmU1GZC5zR7oUqLI12XUvVgLyafG&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 19">
+                </div>
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1NKM2A5ngb3gDlQW0vK45ZHtOitbCxuNa&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1NKM2A5ngb3gDlQW0vK45ZHtOitbCxuNa&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 20">
+                </div>
+
+                <!-- ROW 9 -->
+                <div class="md:col-span-2 group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1OfJMxaRX-aXf7cEwCNPKB89QS4IP373Y&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1OfJMxaRX-aXf7cEwCNPKB89QS4IP373Y&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 21">
+                </div>
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1PATOB90-rardK3w5Nl3eyh-69AX-fBsa&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1PATOB90-rardK3w5Nl3eyh-69AX-fBsa&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 22">
+                </div>
+
+                <!-- ROW 10 -->
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1PQ9XMkOvw8f0WCMsk2B3kKFuI2Qj8cCk&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1PQ9XMkOvw8f0WCMsk2B3kKFuI2Qj8cCk&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 23">
+                </div>
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1SkBvaEq9mpJraNPmU9iN9vPpr1N6Whux&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1SkBvaEq9mpJraNPmU9iN9vPpr1N6Whux&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 24">
+                </div>
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1Ta1QvIGtmtLLA18rvQ7fsjewbqD-wudI&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1Ta1QvIGtmtLLA18rvQ7fsjewbqD-wudI&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 25">
+                </div>
+
+                <!-- ROW 11 -->
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1UuXqqxE533A9y17RhkYotXdt7LKlfQEe&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1UuXqqxE533A9y17RhkYotXdt7LKlfQEe&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 26">
+                </div>
+                <div class="md:col-span-2 group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1nNwz017t3SHAa9BlGQuGBb7lE9-BNh1P&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1nNwz017t3SHAa9BlGQuGBb7lE9-BNh1P&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 27">
+                </div>
+
+                <!-- ROW 12 -->
+                <div class="md:col-span-2 group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1v_UTrsQy9SxB5ZDwkkeuxp9cc72nqFwn&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1v_UTrsQy9SxB5ZDwkkeuxp9cc72nqFwn&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 28">
+                </div>
+                <div class="group relative overflow-hidden rounded-sm cursor-pointer hover:shadow-2xl transition-all bg-black/50" onclick="openLightbox('https://drive.google.com/thumbnail?id=1yLxsVrAmIAgTETpNFqk75trFvtXtzEm9&sz=w1000')">
+                    <img src="https://drive.google.com/thumbnail?id=1yLxsVrAmIAgTETpNFqk75trFvtXtzEm9&sz=w1000" class="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" alt="Gallery 29">
+                </div>
+            </div>
+
+            <div class="mt-16 p-8 md:p-12 border border-white/10 rounded-xl text-center bg-blue-900/10">
+                <h3 class="text-2xl md:text-3xl font-bold mb-6" data-i18n="cta_title">Ready to Create Your Own Memories?</h3>
+                <button onclick="switchView('main'); document.getElementById('contact').scrollIntoView({behavior: 'smooth'})" class="bg-brand-accent hover:bg-blue-600 text-white px-8 py-4 rounded-sm uppercase tracking-widest font-bold transition-all shadow-lg shadow-blue-500/30 w-full md:w-auto" data-i18n="btn_book">Book Now</button>
+            </div>
+        </div>
+    </div> <!-- END GALLERY VIEW -->
+
+    <!-- Footer -->
+    <footer class="bg-black py-12 border-t border-gray-900">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center gap-4">
+            <div class="text-2xl font-bold tracking-widest serif text-white">
+                EASY <span class="text-brand-accent">DIGITAL</span>
+            </div>
+            <div class="text-gray-600 text-sm text-center">
+                © 2024 Easy Digital Studios. Owned by Deepak Soni. All rights reserved.
+            </div>
+        </div>
+    </footer>
+
+    <!-- NEURAL BACKGROUND LOGIC -->
+    <script>
+        // --- VIDEO TEASER LOGIC (TRUE CENTERED CAROUSEL - 9 UNIQUE VIDEOS) ---
+        const teasers = [
+            "https://drive.google.com/file/d/1uxQV0KraT3ht2xWZTSzSA40ilJrRoP2f/preview",
+            "https://drive.google.com/file/d/154NAyp2nEHgIZkiFMTpNjoGlNCeFuN2v/preview",
+            "https://drive.google.com/file/d/1I_TzF8pShvJXJNPNR4s1vfHd-46-Cmo6/preview",
+            "https://drive.google.com/file/d/1NRUcsKqvxA5MWOOuZ3VXys_hfbOliJyW/preview",
+            "https://drive.google.com/file/d/1Q8-ueZ-UuPyCb3feBZKTsCTOH44pBIsx/preview",
+            "https://drive.google.com/file/d/1CP-2rt54qAgcRe3X1LZ6eF4amFAo0xkf/preview",
+            "https://drive.google.com/file/d/1F2xmAaLPiwfwKxuNU3MFYIBvCKHuMqg9/preview",
+            "https://drive.google.com/file/d/1P-Hcy2OYnVRt2oRYi1xF_DUTihBFraHz/preview",
+            "https://drive.google.com/file/d/1PEpjh5Jcz48LUNfq2TC3Y8uYBj0KtScQ/preview"
+        ];
+        let currentTeaserIdx = 0;
+
+        function changeTeaser(dir) {
+            const root = document.getElementById('video-carousel-root');
+            const card = document.getElementById('main-video-card');
+            
+            // Visual transition kick-off
+            card.classList.add('switching-video');
+            
+            setTimeout(() => {
+                currentTeaserIdx = (currentTeaserIdx + dir + teasers.length) % teasers.length;
+                const nextIdx = (currentTeaserIdx + 1) % teasers.length;
+                
+                const iframe = document.getElementById('teaser-iframe');
+                const peekIframe = document.getElementById('peek-iframe');
+                const overlay = document.querySelector('.teaser-overlay');
+                const counter = document.getElementById('teaser-counter');
+                
+                // Update players
+                iframe.src = teasers[currentTeaserIdx];
+                peekIframe.src = teasers[nextIdx];
+                
+                // Reset play UI
+                overlay.classList.remove('playing');
+                counter.innerText = `Video ${currentTeaserIdx + 1} / ${teasers.length}`;
+                
+                // End visual transition
+                card.classList.remove('switching-video');
+            }, 350);
+        }
+
+        function playTeaser(container) {
+            const iframe = container.querySelector('iframe');
+            const overlay = container.querySelector('.teaser-overlay');
+            if (!iframe.src.includes('autoplay=1')) {
+                iframe.src += iframe.src.includes('?') ? '&autoplay=1' : '?autoplay=1';
+            }
+            overlay.classList.add('playing');
+        }
+
+        const canvas = document.getElementById('neuralCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Config: Deep Blue & Black Theme
+        const config = {
+            particleColor: 'rgba(59, 130, 246, 0.5)', 
+            lineColor: 'rgba(30, 64, 175,',            
+            interactionColor: 'rgba(6, 182, 212,',    
+            particleCountMultiplier: 15000, 
+            connectionDistance: 140,
+            interactionDistance: 180,
+            baseSpeed: 0.3 
+        };
+
+        let width, height;
+        let particles = [];
+        let mouse = { x: null, y: null };
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            initParticles();
+        }
+        window.addEventListener('resize', resize);
+        
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+        
+        window.addEventListener('touchmove', (e) => {
+            mouse.x = e.touches[0].clientX;
+            mouse.y = e.touches[0].clientY;
+        });
+
+        window.addEventListener('mouseout', () => {
+            mouse.x = null;
+            mouse.y = null;
+        });
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() * 2 - 1) * config.baseSpeed;
+                this.vy = (Math.random() * 2 - 1) * config.baseSpeed;
+                this.size = Math.random() * 1.5 + 1;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < 0 || this.x > width) this.vx *= -1;
+                if (this.y < 0 || this.y > height) this.vy *= -1;
+
+                if(mouse.x != null) {
+                    let dx = mouse.x - this.x;
+                    let dy = mouse.y - this.y;
+                    let distance = Math.sqrt(dx*dx + dy*dy);
+                    if (distance < 200) {
+                        const forceDirectionX = dx / distance;
+                        const forceDirectionY = dy / distance;
+                        const force = (200 - distance) / 200;
+                        const directionX = forceDirectionX * force * 1.2; 
+                        const directionY = forceDirectionY * force * 1.2;
+                        this.x -= directionX;
+                        this.y -= directionY;
+                    }
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = config.particleColor;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            let count = (width * height) / config.particleCountMultiplier; 
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+
+                for (let j = i; j < particles.length; j++) {
+                    let dx = particles[i].x - particles[j].x;
+                    let dy = particles[i].y - particles[j].y;
+                    let distance = Math.sqrt(dx*dx + dy*dy);
+
+                    if (distance < config.connectionDistance) {
+                        ctx.beginPath();
+                        let alpha = 1 - (distance / config.connectionDistance);
+                        ctx.strokeStyle = `${config.lineColor} ${alpha * 0.3})`;
+                        ctx.lineWidth = 1;
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+                
+                if(mouse.x != null) {
+                    let dx = particles[i].x - mouse.x;
+                    let dy = particles[i].y - mouse.y;
+                    let distance = Math.sqrt(dx*dx + dy*dy);
+                    if (distance < config.interactionDistance) {
+                        ctx.beginPath();
+                        let alpha = 1 - (distance / config.interactionDistance);
+                        ctx.strokeStyle = `${config.interactionColor} ${alpha})`; 
+                        ctx.lineWidth = 1;
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(mouse.x, mouse.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        resize();
+        animate();
+
+        // --- BACKGROUND SLIDESHOW LOGIC ---
+        const bgContainer = document.getElementById('bg-slideshow');
+        const bgImages = [
+            "https://drive.google.com/thumbnail?id=1Iv0TAYdjXkzPzqtAH972hfSxK3UQ1cWD&sz=w1920",
+            "https://drive.google.com/thumbnail?id=1SkBvaEq9mpJraNPmU9iN9vPpr1N6Whux&sz=w1920",
+            "https://drive.google.com/thumbnail?id=1Uf4qs77fsVhlwTGB5UqbpDydfMFc6FuS&sz=w1920",
+            "https://drive.google.com/thumbnail?id=1VCpFCiBrObcpx5a-Gpuz6dGS9RXkatOo&sz=w1920",
+            "https://drive.google.com/thumbnail?id=1hLIYC4MIaS_LRLyk4St6GMPFCR3YZXfo&sz=w1920"
+        ];
+        
+        let bgIndex = 0;
+        bgImages.forEach((src, i) => {
+            const img = document.createElement('img');
+            img.src = src;
+            const effectClass = i % 2 === 0 ? 'grayscale' : '';
+            img.className = `absolute inset-0 w-full h-full object-cover ${effectClass} transition-opacity duration-[1500ms] ease-in-out ${i === 0 ? 'opacity-100' : 'opacity-0'}`;
+            img.id = `bg-img-${i}`;
+            bgContainer.appendChild(img);
+        });
+
+        function cycleBg() {
+            const nextIndex = (bgIndex + 1) % bgImages.length;
+            const currentImg = document.getElementById(`bg-img-${bgIndex}`);
+            const nextImg = document.getElementById(`bg-img-${nextIndex}`);
+            if (currentImg && nextImg) {
+                currentImg.classList.remove('opacity-100');
+                currentImg.classList.add('opacity-0');
+                nextImg.classList.remove('opacity-0');
+                nextImg.classList.add('opacity-100');
+                bgIndex = nextIndex;
+            }
+        }
+        setInterval(cycleBg, 3000); 
+
+        // --- ALBUM LOGIC ---
+        const albumData = [
+            "https://drive.google.com/thumbnail?id=12m5j8YrkbP1ZvlZowQL11q-yEDdVmt6N&sz=w1000",
+            "https://drive.google.com/thumbnail?id=16aBfZFUrZdfVHxu_AwyKwKi8Ic6Au4eC&sz=w1000",
+            "https://drive.google.com/thumbnail?id=15om3T_WoekrbH5cSkx7SrTXBjqSHnW4S&sz=w1000",
+            "https://drive.google.com/thumbnail?id=17qUgsmCyybdhFAHe571nseoT5e_3rvWa&sz=w1000",
+            "https://drive.google.com/thumbnail?id=18Bq7l7iojD9kxHpNQzxqXsnMHHnmnrp_&sz=w1000",
+            "https://drive.google.com/thumbnail?id=18xmYW46uet31lu0R0vgp5ExhvpDidOUS&sz=w1000",
+            "https://drive.google.com/thumbnail?id=1Gq8B9v_Gfgyj6uINvWdmxlwt81DBgVxl&sz=w1000",
+            "https://drive.google.com/thumbnail?id=1YVh8jprMXD_0c5PRKAwmvARl9FfKuXZA&sz=w1200",
+            "https://drive.google.com/thumbnail?id=1aFentP17RUC8rifx5MuOda8nkZbaJUfv&sz=w1000",
+            "https://drive.google.com/thumbnail?id=1eEX6w8sFp4YjJSZyn9Nm-R82BOqovz6f&sz=w1000",
+            "https://drive.google.com/thumbnail?id=1vQmzHYKSB77S-oXChiZKNfHp3nhlStpN&sz=w1000",
+            "https://drive.google.com/thumbnail?id=1wyacihzsbS0wdGOLqh3kOjWaHeYl1Xr2&sz=w1000"
+        ];
+
+        const albumContainer = document.getElementById('digitalAlbum');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        let currentLeaf = -1; 
+        const totalLeaves = (albumData.length / 2) - 1; 
+
+        function initAlbum() {
+            const bl = document.querySelector('.album-base-left img');
+            const br = document.querySelector('.album-base-right img');
+            if(bl) bl.src = albumData[0];
+            if(br) br.src = albumData[albumData.length - 1];
+            let leavesHTML = '';
+            for (let i = 0; i < totalLeaves; i++) {
+                leavesHTML += `<div class="album-leaf" id="leaf-${i}" style="--i: ${i}" onclick="flipLeaf(${i})">
+                    <div class="album-page front"><img src="${albumData[2*i+1]}" class="page-img"><div class="page-lighting"></div></div>
+                    <div class="album-page back"><img src="${albumData[2*i+2]}" class="page-img"><div class="page-lighting"></div></div>
+                </div>`;
+            }
+            albumContainer.insertAdjacentHTML('beforeend', leavesHTML);
+            updateButtons();
+        }
+
+        window.flipLeaf = function(index) {
+            const leaf = document.getElementById(`leaf-${index}`);
+            if(!leaf) return;
+            if (leaf.classList.contains('flipped')) {
+                leaf.classList.remove('flipped');
+                currentLeaf = index - 1;
+            } else {
+                if (index === 0 || document.getElementById(`leaf-${index-1}`).classList.contains('flipped')) {
+                    leaf.classList.add('flipped');
+                    currentLeaf = index;
+                }
+            }
+            updateButtons();
+        }
+
+        function updateButtons() {
+            if (prevBtn) prevBtn.disabled = currentLeaf < 0;
+            if (nextBtn) nextBtn.disabled = currentLeaf >= totalLeaves - 1;
+        }
+
+        if (prevBtn) prevBtn.onclick = () => window.flipLeaf(currentLeaf);
+        if (nextBtn) nextBtn.onclick = () => window.flipLeaf(currentLeaf + 1);
+        initAlbum();
+
+        // --- ALBUM FULLSCREEN & SWIPE LOGIC ---
+        function toggleAlbumFullscreen() {
+            const container = document.getElementById('albumContainer');
+            const icon = document.querySelector('#fullscreenBtn i');
+            
+            container.classList.toggle('fullscreen-mode');
+            
+            if(container.classList.contains('fullscreen-mode')) {
+                icon.classList.replace('fa-expand', 'fa-compress');
+                document.body.style.overflow = 'hidden'; // Prevent background scrolling
+                
+                // Attempt orientation lock on supported devices (Android Chrome)
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('landscape').catch(e => console.log('Orientation lock not supported or denied.'));
+                }
+            } else {
+                icon.classList.replace('fa-compress', 'fa-expand');
+                document.body.style.overflow = ''; // Restore scrolling
+                
+                if (screen.orientation && screen.orientation.unlock) {
+                    screen.orientation.unlock();
+                }
+            }
+        }
+
+        // Swipe detection for album
+        let touchstartX = 0;
+        let touchendX = 0;
+        
+        const albumBookElem = document.getElementById('digitalAlbum');
+        
+        albumBookElem.addEventListener('touchstart', e => {
+            touchstartX = e.changedTouches[0].screenX;
+        }, {passive: true});
+        
+        albumBookElem.addEventListener('touchend', e => {
+            touchendX = e.changedTouches[0].screenX;
+            handleAlbumSwipe();
+        }, {passive: true});
+
+        function handleAlbumSwipe() {
+            const threshold = 40; // minimum distance to register a swipe
+            if (touchendX < touchstartX - threshold) {
+                // Swiped Left -> Next Page
+                if (currentLeaf < totalLeaves - 1) {
+                    window.flipLeaf(currentLeaf + 1);
+                }
+            }
+            if (touchendX > touchstartX + threshold) {
+                // Swiped Right -> Previous Page
+                if (currentLeaf >= 0) {
+                    window.flipLeaf(currentLeaf);
+                }
+            }
+        }
+
+        // --- UI LOGIC ---
+        function switchView(viewName) {
+            const main = document.getElementById('main-view'), gallery = document.getElementById('gallery-view');
+            if (viewName === 'gallery') {
+                main.classList.add('hidden');
+                gallery.classList.remove('hidden');
+                window.scrollTo(0,0);
+            } else {
+                gallery.classList.add('hidden');
+                main.classList.remove('hidden');
+            }
+        }
+
+        function openLightbox(src) {
+            document.getElementById('lightbox-img').src = src;
+            document.getElementById('lightbox').classList.remove('hidden');
+        }
+        function closeLightbox() {
+            document.getElementById('lightbox').classList.add('hidden');
+        }
+
+        // --- BOOKING LOGIC ---
+        function sendToWhatsapp() {
+            const n = document.getElementById('name'), p = document.getElementById('phone'), d = document.getElementById('date');
+            if(!n.value || !p.value) {
+                [n,p].forEach(e => e.classList.toggle('border-red-500', !e.value));
+                return;
+            }
+            const dateVal = d.value || 'Not specified';
+            const text = `*New Inquiry*\nName: ${n.value}\nPhone: ${p.value}\nDate: ${dateVal}\nType: ${document.getElementById('type').value}\nMsg: ${document.getElementById('message').value}`;
+            window.open(`https://wa.me/919826353400?text=${encodeURIComponent(text)}`, '_blank');
+        }
+        function sendToMail() {
+            const n = document.getElementById('name'), p = document.getElementById('phone'), d = document.getElementById('date');
+            if(!n.value || !p.value) return;
+            const dateVal = d.value || 'Not specified';
+            const sub = encodeURIComponent(`Booking Inquiry from ${n.value}`);
+            const body = encodeURIComponent(`Name: ${n.value}\nPhone: ${p.value}\nDate: ${dateVal}\nType: ${document.getElementById('type').value}\nMsg: ${document.getElementById('message').value}`);
+            window.location.href = `mailto:neeludeepak026@gmail.com?subject=${sub}&body=${body}`;
+        }
+
+        // --- TRANSLATIONS (FULL DICTIONARY RESTORED) ---
+        let currentLang = 'en';
+        const translations = {
+            en: {
+                nav_home: "Home", nav_about: "About Deepak", nav_services: "Services", nav_gallery: "Gallery", nav_packages: "Packages", nav_faq: "FAQ", nav_book: "Book Date",
+                hero_badge: "Premium Wedding Cinematography", hero_title_1: "From", hero_haldi: "Haldi", hero_to: "to", hero_reception: "Reception", hero_subtitle: "We Capture Your Soul.",
+                hero_desc: "Welcome to <strong>Easy Digital Studios</strong>. Under the vision of <strong>Deepak Soni</strong>, we turn your Big Indian Wedding into a cinematic masterpiece that lasts forever.",
+                btn_portfolio: "View Shaadi Portfolio", btn_check: "Check Availability", about_founder_tag: "Deepak Soni, Founder", about_title: "The Man Behind the Lens",
+                about_quote: "\"Every photo is a timeless memory.\" — Deepak Soni", about_text1: "Established by <strong>Deepak Soni</strong> in 2000, Easy Digital Studios has become a household name for premium photography. With over two decades of experience in capturing the vibrant chaos and beauty of Indian weddings, Deepak brings a unique artistic vision to every event.",
+                stat_years: "Years", stat_couples: "Happy Couples", stat_pan: "Pan", stat_india: "India Coverage",
+                album_badge: "Premium Experience", album_title: "Digital Album Preview", album_desc: "Experience our signature 12x36\" layouts in Textbook Mode.<br class='md:hidden'>Click/Tap right side to turn.",
+                teaser_badge: "Cinema in Motion", teaser_title: "Cinematic Masterpiece", teaser_desc: "A glimpse into the soulful stories we capture through our lens.",
+                services_title: "Our Services", services_subtitle: "Complete coverage for your special days.",
+                srv_photo_title: "<i class='fas fa-camera-retro mr-4'></i> Photography", srv_candid_title: "Candid Wedding Photography", srv_candid_desc: "Capturing raw emotions during Phere, Sindoor, and Vidaai without you noticing we are there.",
+                srv_prewed_title: "Pre-Wedding Shoots", srv_prewed_desc: "Romantic shoots in Udaipur, Goa, or scenic local spots. Tell your love story your way.",
+                srv_bday_title: "Birthday Shoots", srv_bday_desc: "Capture the joy of your special day with our creative birthday photography.",
+                srv_video_title: "<i class='fas fa-video mr-4'></i> Cinematography", srv_film_title: "Cinematic Wedding Films", srv_film_desc: "4K films that look like Bollywood movies. Drone shots, slow motion, and perfect music.",
+                srv_trad_title: "Traditional Videography", srv_trad_desc: "Full coverage documentation of the entire event rituals from start to finish.",
+                srv_combo_title: "✨ Shadi Combo Package", srv_combo_desc: "Book Photo + Video for Haldi, Sangeet & Wedding together for a special discount.",
+                srv_combo_btn: "Call Deepak Sir Now &rarr;", gallery_title: "Featured Masterpieces", btn_full_gallery: "View Full Gallery <i class='fab fa-instagram ml-2'></i>",
+                pricing_title: "Investment", pricing_subtitle: "Transparent Pricing (Approximate)", pkg_1_name: "BEST SAVER", pkg_1_desc: "Value Package", pkg_feat_trad: "Traditional Photo & Video", pkg_feat_album: "40 Sheet Album (Glossy, 12x36\")", pkg_feat_2day: "2 Day Coverage", pkg_feat_lite: "Lite Candid & Cine Shots",
+                pkg_2_name: "CINEMATIC CLASSIC", pkg_badge: "Most Popular", pkg_2_desc: "Premium Coverage", pkg_feat_trad_candid: "Traditional + Candid Photo", pkg_feat_cine_teaser: "Cinematic Video + Teaser", pkg_feat_trad_vid: "Traditional Video Coverage",
+                pkg_3_name: "ROYAL ELITE", pkg_3_desc: "The Ultimate Experience", pkg_feat_all_pv: "Traditional + Candid Photo/Video", pkg_feat_prewed: "Pre-Wedding Shoot", pkg_feat_drone: "Drone Coverage",
+                btn_book: "Book Now", btn_inquire: "Inquire", testimonial_text: "\"Deepak ji and his team were amazing! They captured our wedding so beautifully, especially the vidaai moments. The photos look like a movie.\"",
+                testimonial_loc: "Married in Jaipur, 2023", faq_title: "Frequently Asked Questions", faq_q1: "Do you travel outside the city for weddings?", faq_a1: "Yes! We cover destination weddings across India. Travel and stay charges will be extra as per actuals.",
+                faq_q2: "How many days for photo delivery?", faq_a2: "We provide 10-20 pics within 1 week for your social media. The full album and videos usually take 3-4 weeks.",
+                faq_q3: "What is the booking advance?", faq_a3: "25% on booking, 50% when the program starts, and the remaining 25% on final delivery.",
+                contact_title: "Book Your Dates", contact_subtitle: "Deepak Soni and the team are ready to capture your moments.", lbl_name: "Your Name", lbl_phone: "Phone Number", lbl_email: "Your Email", lbl_date: "Event Date", lbl_type: "Event Type", lbl_msg: "Message", contact_info: "Contact Info", lbl_address: "Studio Address", address_val: "Shop no 3 Arihant Complex, Kolar Road,<br>in front of Aapurti, Bhopal, Madhya Pradesh 462042", lbl_mobile: "Mobile", follow_us: "Follow Us",
+                full_gallery_title: "Full Portfolio", full_gallery_subtitle: "A curated collection of our finest moments.", btn_back_home: "Back to Home", cta_title: "Ready to Create Your Own Memories?"
+            },
+            hi: {
+                nav_home: "होम", nav_about: "दीपक के बारे में", nav_services: "सेवाएं", nav_gallery: "गैलरी", nav_packages: "पैकेज", nav_faq: "सवाल-जवाब", nav_book: "बुक करें",
+                hero_badge: "प्रीमियम वेडिंग सिनेमैटोग्राफी", hero_title_1: "", hero_haldi: "हल्दी", hero_to: "से", hero_reception: "रिसेप्शन", hero_subtitle: "हम आपकी यादों को संजोते हैं।",
+                hero_desc: "<strong>Easy Digital Studios</strong> में आपका स्वागत है। <strong>दीपक सोनी</strong> की देखरेख में, हम आपकी शादी को एक ऐसी फिल्म बना देते हैं जो हमेशा याद रहेगी।",
+                btn_portfolio: "शादी का पोर्टफोलियो देखें", btn_check: "तारीखें चेक करें", about_founder_tag: "दीपक सोनी, संस्थापक", about_title: "कैमरे के पीछे का कलाकार",
+                about_quote: "\"हर तस्वीर एक अनमोल याद है।\" — दीपक सोनी", about_text1: "2000 में <strong>दीपक सोनी</strong> द्वारा स्थापित, Easy Digital Studios अब एक जाना-माना नाम है। भारतीय शादियों की खूबसूरती और रौनक को कैद करने का उन्हें 2 दशकों से ज्यादा का अनुभव है।",
+                stat_years: "वर्ष", stat_couples: "खुश जोड़े", stat_pan: "पूरे", stat_india: "भारत में कवरेज",
+                album_badge: "प्रीमियम अनुभव", album_title: "डिजिटल एल्बम झलक", album_desc: "हमारे खास 12x36\" पैनोरमिक लेआउट का अनुभव करें।<br class='md:hidden'>पेज पलटने के लिए दाईं ओर क्लिक करें।",
+                teaser_badge: "मोशन में सिनेमा", teaser_title: "सिनेमैटिक मास्टरपीस", teaser_desc: "हमारे कैमरे के जरिए कैद की गई रूहानी कहानियों की एक झलक।",
+                services_title: "हमारी सेवाएं", services_subtitle: "आपके खास दिनों की पूरी कवरेज।",
+                srv_photo_title: "<i class='fas fa-camera-retro mr-4'></i> फोटोग्राफी", srv_candid_title: "कैंडिड वेडिंग फोटोग्राफी", srv_candid_desc: "फेरे, सिंदूर और विदाई के भावुक पलों को बिना आपके जाने कैद करना।",
+                srv_prewed_title: "प्री-वेडिंग शूट", srv_prewed_desc: "उदयपुर, गोवा या स्थानीय जगहों पर रोमांटिक शूट। अपनी प्रेम कहानी अपने अंदाज में कहें।",
+                srv_bday_title: "जन्मदिन शूट", srv_bday_desc: "हमारे क्रिएटिव फोटोग्राफी के साथ अपने जन्मदिन की खुशियों को कैद करें।",
+                srv_video_title: "<i class='fas fa-video mr-4'></i> सिनेमैटोग्राफी", srv_film_title: "सिनेमैटिक वेडिंग फिल्म्स", srv_film_desc: "4K फिल्में जो बॉलीवुड फिल्मों जैसी दिखती हैं। ड्रोन शॉट्स, स्लो靠 मोशन और बेहतरीन संगीत।",
+                srv_trad_title: "पारंपरिक वीडियोग्राफी", srv_trad_desc: "शुरुआत से अंत तक पूरे रस्मों-रिवाजों का पूरा कवरेज।",
+                srv_combo_title: "✨ शादी कॉम्बो पैकेज", srv_combo_desc: "हल्दी, संगीत और शादी के लिए फोटो + वीडियो एक साथ बुक करें और छूट पाएं।",
+                srv_combo_btn: "दीपक सर को अभी कॉल करें &rarr;", gallery_title: "हमारी बेहतरीन तस्वीरें", btn_full_gallery: "पूरी गैलरी देखें <i class='fab fa-instagram ml-2'></i>",
+                pricing_title: "कीमतें (पैकेज)", pricing_subtitle: "पारदर्शी मूल्य निर्धारण (अनुमानित)", pkg_1_name: "बेस्ट सेवर", pkg_1_desc: "वैल्यू पैकेज", pkg_feat_trad: "पारंपरिक फोटो और वीडियो", pkg_feat_album: "40 शीट एल्बम (ग्लॉसी, 12x36\")", pkg_feat_2day: "2 दिन की कवरेज", pkg_feat_lite: "लाइट कैंडिड और सिने शॉट्स",
+                pkg_2_name: "सिनेमैटिक क्लासिक", pkg_badge: "सबसे लोकप्रिय", pkg_2_desc: "प्रीमियम कवरेज", pkg_feat_trad_candid: "पारंपरिक + कैंडिड फोटो", pkg_feat_cine_teaser: "सिनेमैटिक वीडियो + टीज़र", pkg_feat_trad_vid: "पारंपरिक वीडियो कवरेज",
+                pkg_3_name: "रॉयल एलीट", pkg_3_desc: "शानदार अनुभव", pkg_feat_all_pv: "पारंपरिक + कैंडिड फोटो/वीडियो", pkg_feat_prewed: "प्री-वेडिंग शूट", pkg_feat_drone: "ड्रोन कवरेज",
+                btn_book: "बुक करें", btn_inquire: "पूछताछ करें", testimonial_text: "\"दीपक जी और उनकी टीम अद्भुत थी! उन्होंने हमारी शादी को बहुत खूबसूरती से कैद किया, खासकर विदाई के पल। तस्वीरें किसी फिल्म जैसी लगती हैं।\"",
+                testimonial_loc: "जयपुर में शादी, 2023", faq_title: "अक्सर पूछे जाने वाले सवाल", faq_q1: "क्या आप शादी के लिए शहर से बाहर जाते हैं?", faq_a1: "हाँ! हम पूरे भारत में डेस्टिनेशन वेडिंग कवर करते हैं। यात्रा और रहने का खर्च अलग से होगा।",
+                faq_q2: "फोटो मिलने में कितने दिन लगते हैं?", faq_a2: "हम सोशल मीडिया के लिए 1 सप्ताह के भीतर 10-20 तस्वीरें देते हैं। पूरा एल्बम और वीडियो आमतौर पर 3-4 सप्ताह लेते हैं।",
+                faq_q3: "बुकिंग एडवांस क्या है?", faq_a3: "बुकिंग पर 25%, कार्यक्रम शुरू होने पर 50%, और डिलीवरी पर शेष 25%।",
+                contact_title: "अपनी तारीखें बुक करें", contact_subtitle: "दीपक सोनी और टीम आपके पलों को कैद करने के लिए तैयार हैं।", lbl_name: "आपका नाम", lbl_phone: "फ़ोन नंबर", lbl_email: "आपका ईमेल", lbl_date: "इवेंट की तारीख", lbl_type: "इवेंट का प्रकार", lbl_msg: "संदेश", contact_info: "संपर्क जानकारी", lbl_address: "स्टूडियो का पता", address_val: "दुकान नंबर 3 अरिहंत कॉम्प्लेक्स, कोलार रोड,<br>आपूर्ति के सामने, भोपाल, मध्य प्रदेश 462042", lbl_mobile: "मोबाइल", follow_us: "हमें फॉलो करें",
+                full_gallery_title: "पूरा पोर्टफोलियो", full_gallery_subtitle: "हमारे बेहतरीन पलों का संग्रह।", btn_back_home: "वापस होम पर जाएं", cta_title: "क्या आप अपनी यादें बनाने के लिए तैयार हैं?"
+            }
+        };
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'hi' : 'en';
+            const btnText = currentLang === 'en' ? 'EN | HI' : 'HI | EN';
+            document.getElementById('lang-btn-desktop').innerText = btnText;
+            document.getElementById('lang-btn-mobile').innerText = btnText;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[currentLang][key]) el.innerHTML = translations[currentLang][key];
+            });
+        }
+
+        window.onload = () => {
+            document.body.classList.remove('opacity-0');
+        };
+    </script>
+</body>
+</html>
