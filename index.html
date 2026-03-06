@@ -239,8 +239,8 @@
         /* Video Section Styling */
         .video-container {
             position: relative;
-            width: 100%;
-            aspect-ratio: 16 / 9; /* Clean, modern aspect ratio */
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
             overflow: hidden;
             max-width: 100%;
             background: #000;
@@ -249,7 +249,8 @@
         
         .video-wrapper {
             position: absolute;
-            inset: 0;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
         }
@@ -347,11 +348,6 @@
         @media (max-width: 1024px) {
             .teaser-card { flex: 0 0 100%; }
             .teaser-peek { display: none; }
-            
-            /* Add vertical space on mobile to prevent Drive's player toolbars from cropping the video */
-            .video-container {
-                aspect-ratio: 4 / 3; 
-            }
             
             /* Move carousel buttons below the video on mobile so they don't block the play button */
             .teaser-carousel-container { padding-bottom: 70px; }
@@ -1029,11 +1025,9 @@
         }
 
         function playTeaser(container) {
-            const iframe = container.querySelector('iframe');
             const overlay = container.querySelector('.teaser-overlay');
-            if (!iframe.src.includes('autoplay=1')) {
-                iframe.src += iframe.src.includes('?') ? '&autoplay=1' : '?autoplay=1';
-            }
+            // FIX: Removed the iframe.src update! 
+            // Google Drive preview links glitch and get stuck loading if we try to force autoplay on them.
             overlay.classList.add('playing');
         }
 
