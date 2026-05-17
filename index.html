@@ -6,6 +6,7 @@
     <title>EASY DIGITAL STUDIOS | By Deepak Soni</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
     <script>
         tailwind.config = {
             theme: {
@@ -231,7 +232,6 @@
         
         .hidden { display: none !important; }
 
-        /* Grayscale Effect */
         .grayscale {
             filter: grayscale(100%);
         }
@@ -239,29 +239,49 @@
         /* Video Section Styling */
         .video-container {
             position: relative;
-            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
-            height: 0;
+            width: 100%;
+            aspect-ratio: 16 / 9; 
             overflow: hidden;
-            max-width: 100%;
             background: #000;
             border-radius: 12px;
         }
         
+        /* Fallback for older browsers lacking aspect-ratio support */
+        @supports not (aspect-ratio: 16 / 9) {
+            .video-container {
+                padding-bottom: 56.25%;
+                height: 0;
+            }
+        }
+
+        /* FIX: Give the Google Drive player extra vertical space on mobile.
+           This prevents the Drive header/footer bars from pushing the video down and causing cutoff */
+        @media (max-width: 768px) {
+            .video-container {
+                aspect-ratio: 4 / 3; /* Sweet spot: taller than 16:9 for toolbars, but not a full 1:1 square */
+                min-height: 260px; 
+            }
+            @supports not (aspect-ratio: 4 / 3) {
+                .video-container {
+                    padding-bottom: 75%;
+                }
+            }
+        }
+        
         .video-wrapper {
             position: absolute;
-            top: 0;
-            left: 0;
+            inset: 0;
             width: 100%;
             height: 100%;
         }
         
         .video-wrapper iframe {
             position: absolute;
-            top: 0;
-            left: 0;
+            inset: 0;
             width: 100%;
             height: 100%;
             border: 0;
+            max-width: 100%; /* Prevent horizontal overflow */
         }
         
         /* Centering Carousel logic - Fixed absolute centering */
@@ -647,7 +667,7 @@
                     <!-- Basic -->
                     <div class="glass-card p-6 md:p-8 rounded-xl text-center border-t-4 border-gray-600">
                         <h3 class="text-lg md:text-xl font-bold uppercase tracking-widest mb-4" data-i18n="pkg_1_name">BEST SAVER</h3>
-                        <div class="text-3xl md:text-4xl font-bold text-white mb-2">₹40,000</div>
+                        <div class="text-3xl md:text-4xl font-bold text-white mb-2">₹45,000</div>
                         <p class="text-gray-400 text-xs mb-8" data-i18n="pkg_1_desc">Value Package</p>
                         <ul class="text-left space-y-4 mb-8 text-gray-300 text-sm">
                             <li class="flex items-center"><i class="fas fa-check text-blue-500 mr-3"></i> <span data-i18n="pkg_feat_trad">Traditional Photo & Video</span></li>
@@ -1399,7 +1419,7 @@
                 srv_photo_title: "<i class='fas fa-camera-retro mr-4'></i> फोटोग्राफी", srv_candid_title: "कैंडिड वेडिंग फोटोग्राफी", srv_candid_desc: "फेरे, सिंदूर और विदाई के भावुक पलों को बिना आपके जाने कैद करना।",
                 srv_prewed_title: "प्री-वेडिंग शूट", srv_prewed_desc: "उदयपुर, गोवा या स्थानीय जगहों पर रोमांटिक शूट। अपनी प्रेम कहानी अपने अंदाज में कहें।",
                 srv_bday_title: "जन्मदिन शूट", srv_bday_desc: "हमारे क्रिएटिव फोटोग्राफी के साथ अपने जन्मदिन की खुशियों को कैद करें।",
-                srv_video_title: "<i class='fas fa-video mr-4'></i> सिनेमैटोग्राफी", srv_film_title: "सिनेमैटिक वेडिंग फिल्म्स", srv_film_desc: "4K फिल्में जो बॉलीवुड फिल्मों जैसी दिखती हैं। ड्रोन शॉट्स, स्लो靠 मोशन और बेहतरीन संगीत।",
+                srv_video_title: "<i class='fas fa-video mr-4'></i> सिनेमैटोग्राफी", srv_film_title: "सिनेमैटिक वेडिंग फिल्म्स", srv_film_desc: "4K फिल्में जो बॉलीवुड फिल्मों जैसी दिखती हैं। ड्रोन शॉट्स, स्लो मोशन और बेहतरीन संगीत।",
                 srv_trad_title: "पारंपरिक वीडियोग्राफी", srv_trad_desc: "शुरुआत से अंत तक पूरे रस्मों-रिवाजों का पूरा कवरेज।",
                 srv_combo_title: "✨ शादी कॉम्बो पैकेज", srv_combo_desc: "हल्दी, संगीत और शादी के लिए फोटो + वीडियो एक साथ बुक करें और छूट पाएं।",
                 srv_combo_btn: "दीपक सर को अभी कॉल करें &rarr;", gallery_title: "हमारी बेहतरीन तस्वीरें", btn_full_gallery: "पूरी गैलरी देखें <i class='fab fa-instagram ml-2'></i>",
